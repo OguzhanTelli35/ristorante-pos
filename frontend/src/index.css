@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════
+   Global Styles — Ristorante POS
+   ═══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
+}
+
+/* ── Utility Classes ── */
+
+@layer components {
+  .btn-pos {
+    @apply transition-all duration-100 ease-in-out;
+  }
+  .btn-pos:active {
+    transform: scale(0.96);
+  }
+
+  .order-card {
+    @apply transition-all duration-150 ease-in-out;
+  }
+  .order-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  .chip {
+    @apply transition-all duration-100 ease-in-out;
+  }
+  .chip:hover {
+    transform: scale(1.04);
+  }
+
+  .cat-tab {
+    @apply transition-all duration-150 ease-in-out;
+  }
+
+  .qty-btn {
+    @apply transition-all duration-100 ease-in-out;
+  }
+  .qty-btn:active {
+    transform: scale(0.9);
+  }
+}
+
+/* ── Touch Optimizations ── */
+@media (pointer: coarse) {
+  .btn-pos, .qty-btn, .cat-tab, .chip {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

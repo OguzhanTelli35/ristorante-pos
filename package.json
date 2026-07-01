@@ -1,0 +1,30 @@
+{
+  "name": "ristorante-pos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-ready restaurant POS system",
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w backend\" \"npm run vite:dev -w @ristorante/frontend\"",
+    "build": "npm run build --workspaces",
+    "typecheck": "tsc --noEmit --workspaces",
+    "lint": "eslint . --ext .ts,.tsx",
+    "clean": "rimraf shared/dist backend/dist frontend/dist frontend/out",
+    "electron:dev": "concurrently -n backend,electron -c blue,green \"npm run dev -w backend\" \"npm run dev -w @ristorante/frontend\"",
+    "electron:build": "npm run electron:build -w @ristorante/frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  },
+  "allowScripts": {
+    "electron@34.5.8": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true
+  }
+}

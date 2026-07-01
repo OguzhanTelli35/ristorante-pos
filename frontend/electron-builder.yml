@@ -1,0 +1,24 @@
+appId: com.ristorante.pos
+productName: Ristorante POS
+directories:
+  buildResources: resources
+  output: release
+forceCodeSigning: false
+files:
+  - out/**/*
+  - package.json
+win:
+  target: nsis
+  icon: resources/icon.png
+  signAndEditExecutable: false
+mac:
+  target: dmg
+  icon: resources/icon.png
+linux:
+  target: AppImage
+  icon: resources/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

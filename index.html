@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ristorante POS — Restaurant Order Management</title>
+  <meta name="description"
+    content="A realistic restaurant POS simulation with table accounts, item-level customization, and production ticket routing." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        }
+      }
+    }
+  </script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.35);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.55);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+    }
+
+    @keyframes pulseGlow {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.25);
+      }
+
+      50% {
+        box-shadow: 0 0 16px 2px rgba(59, 130, 246, 0.12);
+      }
+    }
+
+    .anim-slide {
+      animation: slideIn .3s cubic-bezier(.16, 1, .3, 1) forwards;
+    }
+
+    .anim-fade {
+      animation: fadeIn .2s ease forwards;
+    }
+
+    .anim-glow {
+      animation: pulseGlow 2.5s ease-in-out infinite;
+    }
+
+    .toast-exit {
+      animation: fadeOut .25s ease forwards;
+    }
+
+    .order-card {
+      transition: all .18s ease;
+    }
+
+    .order-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+    }
+
+    .btn-pos {
+      transition: all .12s ease;
+    }
+
+    .btn-pos:active {
+      transform: scale(.96);
+    }
+
+    .chip {
+      transition: all .12s ease;
+    }
+
+    .chip:hover {
+      transform: scale(1.04);
+    }
+
+    .cat-tab {
+      transition: all .15s ease;
+    }
+
+    /* qty button ring */
+    .qty-btn {
+      transition: all .1s ease;
+    }
+
+    .qty-btn:active {
+      transform: scale(.9);
+    }
+
+    /* Expandable sections */
+    .expand-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .3s cubic-bezier(.16, 1, .3, 1), opacity .2s ease;
+      opacity: 0;
+    }
+
+    .expand-content.open {
+      max-height: 2000px;
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen overflow-hidden">
+
+  <!-- ═══════════════════════ TOAST ═══════════════════════ -->
+  <div id="toast-box" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ═══════════════════════ TOP BAR ═══════════════════════ -->
+  <header
+    class="h-12 bg-slate-900/80 border-b border-slate-700/40 flex items-center justify-between px-5 backdrop-blur-md z-50 relative">
+    <div class="flex items-center gap-2.5">
+      <div
+        class="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-extrabold text-xs shadow-lg shadow-amber-500/20">
+        R</div>
+      <h1
+        class="text-base font-extrabold tracking-tight bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+        Ristorante POS</h1>
+    </div>
+    <div class="flex items-center gap-4 text-[11px] font-semibold">
+      <span class="flex items-center gap-1"><span
+          class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span
+          class="text-slate-400">Tables</span><span id="st-tables" class="text-white">0</span></span>
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span><span
+          class="text-slate-400">Orders</span><span id="st-orders" class="text-white">0</span></span>
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span
+          class="text-slate-400">Preparing</span><span id="st-prep" class="text-amber-300">0</span></span>
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span><span
+          class="text-slate-400">Ready</span><span id="st-ready" class="text-green-300">0</span></span>
+      <div class="h-4 w-px bg-slate-700"></div>
+      <span id="clock" class="font-mono tabular-nums text-slate-300 w-16 text-right"></span>
+      <button id="btn-clear"
+        class="btn-pos px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 text-[10px] font-bold hover:bg-red-500/20">Clear
+        All</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════ PANELS ═══════════════════════ -->
+  <main class="h-[calc(100vh-3rem)] grid grid-cols-5 divide-x divide-slate-700/30">
+
+    <!-- WAITER 1 -->
+    <section class="flex flex-col overflow-hidden">
+      <div class="px-3 py-2 border-b border-slate-700/30 bg-slate-900/50 flex items-center gap-2 flex-shrink-0">
+        <div
+          class="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-[9px] font-bold text-white">
+          W1</div>
+        <span class="font-bold text-xs">Waiter 1</span>
+      </div>
+      <div class="flex-1 overflow-y-auto" id="w1-area"></div>
+    </section>
+
+    <!-- WAITER 2 -->
+    <section class="flex flex-col overflow-hidden">
+      <div class="px-3 py-2 border-b border-slate-700/30 bg-slate-900/50 flex items-center gap-2 flex-shrink-0">
+        <div
+          class="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-[9px] font-bold text-white">
+          W2</div>
+        <span class="font-bold text-xs">Waiter 2</span>
+      </div>
+      <div class="flex-1 overflow-y-auto" id="w2-area"></div>
+    </section>
+
+    <!-- KITCHEN -->
+    <section class="flex flex-col overflow-hidden">
+      <div class="px-3 py-2 border-b border-slate-700/30 bg-slate-900/50 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <div
+            class="w-6 h-6 rounded-md bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white text-xs">
+            🔥</div>
+          <span class="font-bold text-xs">Kitchen</span>
+          <span id="kit-cnt"
+            class="ml-auto text-[10px] bg-orange-500/15 text-orange-300 px-1.5 py-0.5 rounded-full font-bold">0</span>
+        </div>
+        <input id="kit-search" type="text" placeholder="Search table / order #…"
+          class="mt-1.5 w-full px-2.5 py-1 rounded-lg bg-slate-800/70 border border-slate-600/30 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-orange-500/40" />
+      </div>
+      <div class="flex-1 overflow-y-auto p-2 space-y-2" id="kit-list"></div>
+    </section>
+
+    <!-- BAR -->
+    <section class="flex flex-col overflow-hidden">
+      <div class="px-3 py-2 border-b border-slate-700/30 bg-slate-900/50 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <div
+            class="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center text-white text-xs">
+            🍹</div>
+          <span class="font-bold text-xs">Bar</span>
+          <span id="bar-cnt"
+            class="ml-auto text-[10px] bg-cyan-500/15 text-cyan-300 px-1.5 py-0.5 rounded-full font-bold">0</span>
+        </div>
+        <input id="bar-search" type="text" placeholder="Search table / order #…"
+          class="mt-1.5 w-full px-2.5 py-1 rounded-lg bg-slate-800/70 border border-slate-600/30 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/40" />
+      </div>
+      <div class="flex-1 overflow-y-auto p-2 space-y-2" id="bar-list"></div>
+    </section>
+
+    <!-- MANAGER / CASHIER -->
+    <section class="flex flex-col overflow-hidden">
+      <div class="px-3 py-2 border-b border-slate-700/30 bg-slate-900/50 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <div
+            class="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-green-700 flex items-center justify-center text-white text-xs">
+            💶</div>
+          <span class="font-bold text-xs">Manager / Cashier</span>
+          <span id="mgr-cnt"
+            class="ml-auto text-[10px] bg-emerald-500/15 text-emerald-300 px-1.5 py-0.5 rounded-full font-bold">0</span>
+        </div>
+        <input id="mgr-search" type="text" placeholder="Search table / order #…"
+          class="mt-1.5 w-full px-2.5 py-1 rounded-lg bg-slate-800/70 border border-slate-600/30 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/40" />
+      </div>
+      <div class="flex-1 overflow-y-auto p-2 space-y-2" id="mgr-list"></div>
+    </section>
+
+  </main>
+
+  <script>
+    // ════════════════════════════════════════════════════════════
+    //  1. MENU DEFINITION
+    // ════════════════════════════════════════════════════════════
+    const MENU_CATEGORIES = [
+      {
+        id: 'food', name: 'Food', emoji: '🍽️', destination: 'kitchen',
+        items: [
+          { id: 'pizza', name: 'Pizza', price: 12, emoji: '🍕', ingredients: ['Cheese', 'Tomato Sauce', 'Mushroom', 'Salami'] },
+          { id: 'pasta', name: 'Pasta', price: 10, emoji: '🍝', ingredients: ['Pasta', 'Parmesan', 'Cream', 'Chicken'] },
+          { id: 'bruschetta', name: 'Bruschetta', price: 7, emoji: '🥖', ingredients: ['Bread', 'Tomato', 'Basil', 'Olive Oil'] },
+          { id: 'risotto', name: 'Risotto', price: 11, emoji: '🍚', ingredients: ['Rice', 'Parmesan', 'Butter', 'Mushroom'] },
+        ]
+      },
+      {
+        id: 'aperitif', name: 'Aperitif', emoji: '🥂', destination: 'bar',
+        items: [
+          { id: 'aperol_spritz', name: 'Aperol Spritz', price: 7, emoji: '🍹', ingredients: ['Aperol', 'Prosecco', 'Soda Water'] },
+          { id: 'campari_soda', name: 'Campari Soda', price: 6, emoji: '🍸', ingredients: ['Campari', 'Soda Water'] },
+        ]
+      },
+      {
+        id: 'alcohol', name: 'Alcohol', emoji: '🍷', destination: 'bar',
+        items: [
+          { id: 'gin_tonic', name: 'Gin Tonic', price: 8, emoji: '🍸', ingredients: ['Gin', 'Tonic', 'Lemon'] },
+          { id: 'raboso', name: 'Raboso', price: 6, emoji: '🍷', ingredients: ['Raboso Wine'] },
+          { id: 'prosecco', name: 'Prosecco', price: 5, emoji: '🥂', ingredients: ['Prosecco'] },
+        ]
+      },
+      {
+        id: 'non_alcoholic', name: 'Non-Alcoholic', emoji: '🥤', destination: 'bar',
+        items: [
+          { id: 'coca_cola', name: 'Coca Cola', price: 3, emoji: '🥤', ingredients: [] },
+          { id: 'still_water', name: 'Still Water', price: 2, emoji: '💧', ingredients: [] },
+          { id: 'orange_juice', name: 'Orange Juice', price: 4, emoji: '🍊', ingredients: ['Fresh Orange'] },
+        ]
+      },
+      {
+        id: 'coffee', name: 'Coffee', emoji: '☕', destination: 'bar',
+        items: [
+          { id: 'espresso', name: 'Espresso', price: 2, emoji: '☕', ingredients: ['Coffee'] },
+          { id: 'cappuccino', name: 'Cappuccino', price: 3, emoji: '☕', ingredients: ['Coffee', 'Milk Foam'] },
+          { id: 'caffe_latte', name: 'Caffè Latte', price: 3.5, emoji: '☕', ingredients: ['Coffee', 'Steamed Milk'] },
+        ]
+      },
+      {
+        id: 'desserts', name: 'Desserts', emoji: '🍰', destination: 'kitchen',
+        items: [
+          { id: 'tiramisu', name: 'Tiramisù', price: 7, emoji: '🍰', ingredients: ['Mascarpone', 'Coffee', 'Cocoa', 'Ladyfingers'] },
+          { id: 'panna_cotta', name: 'Panna Cotta', price: 6, emoji: '🍮', ingredients: ['Cream', 'Vanilla', 'Berry Sauce'] },
+        ]
+      },
+    ];
+
+    // Flat lookup
+    const MENU_MAP = {};
+    MENU_CATEGORIES.forEach(cat => {
+      cat.items.forEach(item => {
+        MENU_MAP[item.id] = { ...item, category: cat.id, categoryName: cat.name, destination: cat.destination };
+      });
+    });
+
+    // ════════════════════════════════════════════════════════════
+    //  2. DATA MODEL & STATE
+    // ════════════════════════════════════════════════════════════
+    let _orderSeq = 0;
+    let _instSeq = 0;
+    function nextOrderId() { return String(++_orderSeq).padStart(4, '0'); }
+    function nextInstId() { return 'i' + (++_instSeq); }
+
+    /*
+     * OrderItem — one individual item instance
+     * {
+     *   instanceId: string
+     *   menuItemId: string
+     *   name, emoji, price: from menu
+     *   category, categoryName, destination: from menu
+     *   ingredients: string[]        (current)
+     *   defaultIngredients: string[] (original)
+     *   note: string                 (item-level note)
+     *   status: 'Pending' | 'Preparing' | 'Ready'
+     * }
+     */
+    function createItem(menuItemId) {
+      const m = MENU_MAP[menuItemId];
+      if (!m) return null;
+      return {
+        instanceId: nextInstId(),
+        menuItemId: m.id,
+        name: m.name,
+        emoji: m.emoji,
+        price: m.price,
+        category: m.category,
+        categoryName: m.categoryName,
+        destination: m.destination,
+        ingredients: [...m.ingredients],
+        defaultIngredients: [...m.ingredients],
+        note: '',
+        status: 'Pending',
+      };
+    }
+
+    /*
+     * Order
+     * {
+     *   id: string (e.g. "0001")
+     *   tableNumber: number
+     *   items: OrderItem[]
+     *   note: string (order-level note)
+     *   waiter: string
+     *   timestamp: Date
+     * }
+     */
+    function createOrder(tableNumber, waiter) {
+      return {
+        id: nextOrderId(),
+        tableNumber,
+        items: [],
+        note: '',
+        waiter,
+        timestamp: new Date(),
+      };
+    }
+
+    /*
+     * TableAccount
+     * {
+     *   tableNumber: number
+     *   orderIds: string[]
+     *   paid: boolean
+     *   closed: boolean
+     *   openedAt: Date
+     *   closedAt: Date|null
+     * }
+     */
+    function createTableAccount(tableNumber) {
+      return {
+        tableNumber,
+        orderIds: [],
+        paid: false,
+        closed: false,
+        openedAt: new Date(),
+        closedAt: null,
+      };
+    }
+
+    // ── Global state ──
+    const STATE = {
+      orders: {},         // orderId -> Order
+      tableAccounts: {},  // tableNumber -> TableAccount
+    };
+
+    function getOrCreateAccount(tableNum) {
+      if (!STATE.tableAccounts[tableNum] || STATE.tableAccounts[tableNum].closed) {
+        STATE.tableAccounts[tableNum] = createTableAccount(tableNum);
+      }
+      return STATE.tableAccounts[tableNum];
+    }
+
+    function accountTotal(acct) {
+      return acct.orderIds.reduce((sum, oid) => {
+        const o = STATE.orders[oid];
+        if (!o) return sum;
+        return sum + o.items.reduce((s, it) => s + it.price, 0);
+      }, 0);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  3. UTILITIES
+    // ════════════════════════════════════════════════════════════
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function fmtTime(d) { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+    function fmtShort(d) { return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+
+    function toast(msg, type = 'success') {
+      const box = document.getElementById('toast-box');
+      const el = document.createElement('div');
+      const c = { success: 'from-emerald-500 to-green-600', info: 'from-blue-500 to-indigo-600', warning: 'from-amber-500 to-orange-600', error: 'from-red-500 to-rose-600' };
+      const ic = { success: '✓', info: 'ℹ', warning: '⚠', error: '✕' };
+      el.className = `anim-slide pointer-events-auto px-3.5 py-2 rounded-xl bg-gradient-to-r ${c[type]} border border-white/10 text-white text-xs font-semibold shadow-2xl flex items-center gap-2 max-w-xs`;
+      el.innerHTML = `<span>${ic[type]}</span><span>${msg}</span>`;
+      box.appendChild(el);
+      setTimeout(() => { el.classList.add('toast-exit'); setTimeout(() => el.remove(), 300); }, 3000);
+    }
+
+    function badge(status, small) {
+      const col = { Pending: 'bg-slate-500/15 text-slate-300 border-slate-500/25', Preparing: 'bg-amber-500/15 text-amber-300 border-amber-500/25', Ready: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25' };
+      const dot = { Pending: 'bg-slate-400', Preparing: 'bg-amber-400 animate-pulse', Ready: 'bg-emerald-400' };
+      const sz = small ? 'text-[9px] px-1 py-px' : 'text-[10px] px-1.5 py-0.5';
+      return `<span class="inline-flex items-center gap-1 ${sz} rounded-full border ${col[status]} font-semibold"><span class="w-1.5 h-1.5 rounded-full ${dot[status]}"></span>${status}</span>`;
+    }
+
+    function modChips(item) {
+      const added = item.ingredients.filter(i => !item.defaultIngredients.includes(i));
+      const removed = item.defaultIngredients.filter(i => !item.ingredients.includes(i));
+      let h = '';
+      removed.forEach(r => { h += `<span class="text-[9px] px-1 py-px rounded bg-red-500/10 text-red-400 border border-red-500/15 font-medium">− ${esc(r)}</span> `; });
+      added.forEach(a => { h += `<span class="text-[9px] px-1 py-px rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 font-medium">+ ${esc(a)}</span> `; });
+      return h;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  4. WAITER PANEL
+    // ════════════════════════════════════════════════════════════
+
+    // Each waiter has a draft state
+    const drafts = {};
+
+    function initDraft(wid) {
+      drafts[wid] = {
+        tableNumber: '',
+        activeCat: MENU_CATEGORIES[0].id,
+        // items keyed by menuItemId -> array of item drafts [{ingredients:[...], note:''}]
+        items: {},
+        orderNote: '',
+      };
+    }
+
+    function getDraft(wid) { if (!drafts[wid]) initDraft(wid); return drafts[wid]; }
+
+    function waiterQty(wid, menuItemId) {
+      const d = getDraft(wid);
+      return (d.items[menuItemId] || []).length;
+    }
+
+    function waiterAddItem(wid, menuItemId) {
+      const d = getDraft(wid);
+      const m = MENU_MAP[menuItemId];
+      if (!d.items[menuItemId]) d.items[menuItemId] = [];
+      d.items[menuItemId].push({ ingredients: [...m.ingredients], note: '' });
+      renderWaiter(wid);
+    }
+
+    function waiterRemoveItem(wid, menuItemId) {
+      const d = getDraft(wid);
+      if (!d.items[menuItemId] || d.items[menuItemId].length === 0) return;
+      d.items[menuItemId].pop();
+      if (d.items[menuItemId].length === 0) delete d.items[menuItemId];
+      renderWaiter(wid);
+    }
+
+    function waiterSetCat(wid, catId) {
+      getDraft(wid).activeCat = catId;
+      renderWaiter(wid);
+    }
+
+    // Track which item groups are expanded for customization
+    const expandedGroups = {};
+    function toggleGroup(wid, menuItemId) {
+      const key = wid + '_' + menuItemId;
+      expandedGroups[key] = !expandedGroups[key];
+      renderWaiter(wid);
+    }
+
+    function removeIngredient(wid, menuItemId, instIdx, ing) {
+      const d = getDraft(wid);
+      const list = d.items[menuItemId]?.[instIdx]?.ingredients;
+      if (!list) return;
+      const i = list.indexOf(ing);
+      if (i > -1) list.splice(i, 1);
+      renderWaiter(wid);
+    }
+
+    function addIngredient(wid, menuItemId, instIdx) {
+      const input = document.getElementById(`${wid}-aing-${menuItemId}-${instIdx}`);
+      if (!input) return;
+      const v = input.value.trim();
+      if (!v) return;
+      const d = getDraft(wid);
+      d.items[menuItemId]?.[instIdx]?.ingredients.push(v);
+      input.value = '';
+      renderWaiter(wid);
+    }
+
+    function setItemNote(wid, menuItemId, instIdx, val) {
+      const d = getDraft(wid);
+      if (d.items[menuItemId]?.[instIdx]) d.items[menuItemId][instIdx].note = val;
+    }
+
+    function setOrderNote(wid, val) {
+      getDraft(wid).orderNote = val;
+    }
+
+    function setTableNumber(wid, val) {
+      getDraft(wid).tableNumber = val;
+    }
+
+    function submitOrder(wid) {
+      const d = getDraft(wid);
+      const tbl = parseInt(d.tableNumber);
+      if (!tbl || tbl < 1) { toast('Enter a valid table number', 'warning'); return; }
+
+      const itemEntries = Object.entries(d.items);
+      if (itemEntries.length === 0) { toast('Add at least one item', 'warning'); return; }
+
+      const waiterLabel = wid === 'w1' ? 'Waiter 1' : 'Waiter 2';
+      const order = createOrder(tbl, waiterLabel);
+      order.note = d.orderNote;
+
+      itemEntries.forEach(([menuItemId, instances]) => {
+        instances.forEach(inst => {
+          const it = createItem(menuItemId);
+          it.ingredients = [...inst.ingredients];
+          it.note = inst.note;
+          order.items.push(it);
+        });
+      });
+
+      STATE.orders[order.id] = order;
+      const acct = getOrCreateAccount(tbl);
+      acct.orderIds.push(order.id);
+
+      toast(`Order #${order.id} — Table ${tbl} sent!`, 'success');
+      initDraft(wid);
+      renderWaiter(wid);
+      renderKitchen();
+      renderBar();
+      renderManager();
+      updateStats();
+    }
+
+    function renderWaiter(wid) {
+      const area = document.getElementById(`${wid}-area`);
+      const d = getDraft(wid);
+
+      // Count total items in draft
+      let totalItems = 0;
+      Object.values(d.items).forEach(arr => totalItems += arr.length);
+
+      // ── Build HTML ──
+      let h = `<div class="p-2.5 space-y-2">`;
+
+      // Table number
+      h += `<div>
+    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Table #</label>
+    <input type="number" min="1" max="99" value="${esc(d.tableNumber)}" placeholder="e.g. 5"
+      oninput="setTableNumber('${wid}', this.value)"
+      class="w-full px-2.5 py-2 rounded-xl bg-slate-800/70 border border-slate-600/30 text-white text-sm font-bold placeholder-slate-500 focus:outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/15" />
+  </div>`;
+
+      // Category tabs
+      h += `<div class="flex flex-wrap gap-1">`;
+      MENU_CATEGORIES.forEach(cat => {
+        const active = d.activeCat === cat.id;
+        h += `<button onclick="waiterSetCat('${wid}','${cat.id}')"
+      class="cat-tab text-[10px] px-2 py-1 rounded-lg font-semibold border ${active ? 'bg-blue-500/20 border-blue-500/30 text-blue-300' : 'bg-slate-800/50 border-slate-700/30 text-slate-400 hover:text-slate-200 hover:bg-slate-700/40'}">
+      ${cat.emoji} ${cat.name}
+    </button>`;
+      });
+      h += `</div>`;
+
+      // Items in active category
+      const activeCat = MENU_CATEGORIES.find(c => c.id === d.activeCat);
+      if (activeCat) {
+        h += `<div class="space-y-1">`;
+        activeCat.items.forEach(item => {
+          const qty = waiterQty(wid, item.id);
+          const hasQty = qty > 0;
+          h += `<div class="rounded-xl ${hasQty ? 'bg-blue-500/5 border-blue-500/20' : 'bg-slate-800/40 border-slate-700/25'} border p-2">
+        <div class="flex items-center gap-2">
+          <span class="text-sm">${item.emoji}</span>
+          <span class="text-xs font-semibold flex-1">${item.name}</span>
+          <span class="text-[10px] font-bold ${activeCat.destination === 'kitchen' ? 'text-orange-400' : 'text-cyan-400'}">${item.price}€</span>
+          <div class="flex items-center gap-1 ml-1">
+            <button onclick="waiterRemoveItem('${wid}','${item.id}')" class="qty-btn w-5 h-5 rounded-md bg-slate-700/60 border border-slate-600/30 text-slate-300 text-xs font-bold flex items-center justify-center hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/30 ${!hasQty ? 'opacity-30 pointer-events-none' : ''}">−</button>
+            <span class="text-xs font-bold w-4 text-center tabular-nums ${hasQty ? 'text-white' : 'text-slate-500'}">${qty}</span>
+            <button onclick="waiterAddItem('${wid}','${item.id}')" class="qty-btn w-5 h-5 rounded-md bg-slate-700/60 border border-slate-600/30 text-slate-300 text-xs font-bold flex items-center justify-center hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/30">+</button>
+          </div>
+        </div>`;
+
+          // If qty>0 show customize toggle
+          if (hasQty) {
+            const gKey = wid + '_' + item.id;
+            const isExpanded = !!expandedGroups[gKey];
+            h += `<button onclick="toggleGroup('${wid}','${item.id}')" class="mt-1.5 text-[10px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+          <svg class="w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+          Customize ${qty > 1 ? `(${qty} items)` : ''}
+        </button>`;
+
+            if (isExpanded) {
+              h += `<div class="mt-1.5 space-y-1.5 anim-fade">`;
+              d.items[item.id].forEach((inst, ii) => {
+                const m = MENU_MAP[item.id];
+                h += `<div class="p-2 rounded-lg bg-slate-900/50 border border-slate-700/20">
+              <div class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">${item.name} #${ii + 1}</div>
+              <div class="flex flex-wrap gap-0.5 mb-1">`;
+                inst.ingredients.forEach(ing => {
+                  h += `<span class="chip inline-flex items-center gap-0.5 px-1.5 py-px rounded-full bg-slate-700/60 border border-slate-600/30 text-[10px] text-slate-200 font-medium">
+                ${esc(ing)}
+                <button onclick="removeIngredient('${wid}','${item.id}',${ii},'${esc(ing)}')" class="text-red-400 hover:text-red-300 font-bold text-[10px] leading-none ml-0.5">×</button>
+              </span>`;
+                });
+                h += `</div>
+              <div class="flex gap-1 mb-1">
+                <input id="${wid}-aing-${item.id}-${ii}" type="text" placeholder="+ ingredient"
+                  class="flex-1 px-1.5 py-0.5 rounded-md bg-slate-800/80 border border-slate-600/20 text-[10px] text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/30"
+                  onkeydown="if(event.key==='Enter')addIngredient('${wid}','${item.id}',${ii})" />
+                <button onclick="addIngredient('${wid}','${item.id}',${ii})" class="btn-pos px-1.5 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/20 text-blue-300 text-[10px] font-semibold hover:bg-blue-500/25">Add</button>
+              </div>
+              <input type="text" value="${esc(inst.note)}" placeholder="Item note (vegetarian, no ice…)"
+                oninput="setItemNote('${wid}','${item.id}',${ii},this.value)"
+                class="w-full px-1.5 py-0.5 rounded-md bg-slate-800/80 border border-slate-600/20 text-[10px] text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/30" />
+            </div>`;
+              });
+              h += `</div>`;
+            }
+          }
+          h += `</div>`;
+        });
+        h += `</div>`;
+      }
+
+      // Order note
+      h += `<div>
+    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Order Note</label>
+    <textarea rows="2" placeholder="Birthday table, allergy warning…"
+      oninput="setOrderNote('${wid}', this.value)"
+      class="w-full px-2 py-1.5 rounded-xl bg-slate-800/70 border border-slate-600/30 text-[11px] text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/40 resize-none">${esc(d.orderNote)}</textarea>
+  </div>`;
+
+      // Draft summary (if items selected)
+      if (totalItems > 0) {
+        let draftTotal = 0;
+        h += `<div class="rounded-xl bg-slate-800/40 border border-slate-700/20 p-2">
+      <div class="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Order Summary</div>`;
+        Object.entries(d.items).forEach(([mid, instances]) => {
+          const m = MENU_MAP[mid];
+          const lineTotal = m.price * instances.length;
+          draftTotal += lineTotal;
+          h += `<div class="flex items-center justify-between text-[11px] py-0.5">
+        <span>${m.emoji} ${m.name} × ${instances.length}</span>
+        <span class="font-bold text-slate-300">${lineTotal}€</span>
+      </div>`;
+        });
+        h += `<div class="border-t border-slate-700/30 mt-1 pt-1 flex justify-between text-xs font-bold">
+      <span>Total</span><span class="text-white">${draftTotal}€</span>
+    </div></div>`;
+      }
+
+      // Submit
+      h += `<button onclick="submitOrder('${wid}')"
+    class="btn-pos w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-blue-500/15 flex items-center justify-center gap-1.5 ${totalItems > 0 ? 'anim-glow' : 'opacity-60'}">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+    SUBMIT ORDER${totalItems > 0 ? ` (${totalItems} items)` : ''}
+  </button>`;
+
+      h += `</div>`;
+      area.innerHTML = h;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  5. KITCHEN PANEL
+    // ════════════════════════════════════════════════════════════
+    function changeStatus(orderId, instId, newStatus) {
+      const order = STATE.orders[orderId];
+      if (!order) return;
+      const item = order.items.find(i => i.instanceId === instId);
+      if (item) {
+        item.status = newStatus;
+        toast(`${item.emoji} ${item.name} → ${newStatus}`, 'info');
+        renderKitchen(); renderBar(); renderManager(); updateStats();
+      }
+    }
+
+    function statusBtns(orderId, instId, current) {
+      const sts = ['Pending', 'Preparing', 'Ready'];
+      return sts.map(s => {
+        const a = s === current;
+        const c = {
+          Pending: a ? 'bg-slate-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700',
+          Preparing: a ? 'bg-amber-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-amber-500/15 hover:text-amber-300',
+          Ready: a ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-emerald-500/15 hover:text-emerald-300',
+        };
+        return `<button onclick="changeStatus('${orderId}','${instId}','${s}')" class="btn-pos text-[9px] px-1.5 py-0.5 rounded-md ${c[s]} font-bold border border-transparent">${s}</button>`;
+      }).join('');
+    }
+
+    function renderProductionPanel(containerId, countId, searchId, destination) {
+      const container = document.getElementById(containerId);
+      const search = document.getElementById(searchId).value.trim().toLowerCase();
+
+      let tickets = [];
+      Object.values(STATE.orders).forEach(order => {
+        // Check if any table account is closed for this order
+        const acct = STATE.tableAccounts[order.tableNumber];
+        if (acct && acct.closed) return;
+        order.items.forEach(item => {
+          if (item.destination === destination) {
+            tickets.push({ order, item });
+          }
+        });
+      });
+
+      if (search) {
+        tickets = tickets.filter(({ order }) =>
+          order.id.includes(search) || String(order.tableNumber).includes(search)
+        );
+      }
+
+      document.getElementById(countId).textContent = tickets.length;
+
+      if (tickets.length === 0) {
+        const emptyIcon = destination === 'kitchen' ? '🔥' : '🍹';
+        const emptyText = destination === 'kitchen' ? 'No food tickets' : 'No drink tickets';
+        container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-500 gap-1.5">
+      <span class="text-2xl opacity-25">${emptyIcon}</span>
+      <span class="text-[11px] font-medium">${emptyText}</span>
+    </div>`;
+        return;
+      }
+
+      // Sort: Pending, Preparing, Ready
+      const so = { Pending: 0, Preparing: 1, Ready: 2 };
+      tickets.sort((a, b) => so[a.item.status] - so[b.item.status]);
+
+      const accent = destination === 'kitchen' ? 'orange' : 'cyan';
+      container.innerHTML = tickets.map(({ order, item }) => {
+        const mc = modChips(item);
+        const bc = item.status === 'Ready' ? 'border-emerald-500/25' : item.status === 'Preparing' ? 'border-amber-500/25' : 'border-slate-700/40';
+        return `<div class="order-card rounded-xl bg-slate-800/50 border ${bc} p-2.5 anim-slide">
+      <div class="flex items-start justify-between mb-1.5">
+        <div class="flex items-center gap-1.5">
+          <span class="text-base">${item.emoji}</span>
+          <div>
+            <div class="font-bold text-xs">${item.name}</div>
+            <div class="flex items-center gap-1.5 text-[9px] text-slate-400 mt-0.5">
+              <span class="font-mono font-bold text-${accent}-400/70">#${order.id}</span>
+              <span>·</span>
+              <span>T<strong class="text-slate-200">${order.tableNumber}</strong></span>
+              <span>·</span>
+              <span>${fmtShort(order.timestamp)}</span>
+            </div>
+          </div>
+        </div>
+        ${badge(item.status)}
+      </div>
+      ${mc ? `<div class="flex flex-wrap gap-0.5 mb-1">${mc}</div>` : ''}
+      ${item.ingredients.length ? `<div class="text-[9px] text-slate-500 mb-1">${item.ingredients.map(i => esc(i)).join(' · ')}</div>` : ''}
+      ${item.note ? `<div class="text-[9px] text-violet-400/80 bg-violet-500/5 rounded-md px-1.5 py-0.5 mb-1 border border-violet-500/10">🏷 ${esc(item.note)}</div>` : ''}
+      ${order.note ? `<div class="text-[9px] text-amber-400/70 bg-amber-500/5 rounded-md px-1.5 py-0.5 mb-1 border border-amber-500/10">📝 ${esc(order.note)}</div>` : ''}
+      <div class="flex gap-1 mt-1">${statusBtns(order.id, item.instanceId, item.status)}</div>
+    </div>`;
+      }).join('');
+    }
+
+    function renderKitchen() { renderProductionPanel('kit-list', 'kit-cnt', 'kit-search', 'kitchen'); }
+    function renderBar() { renderProductionPanel('bar-list', 'bar-cnt', 'bar-search', 'bar'); }
+
+    // ════════════════════════════════════════════════════════════
+    //  6. MANAGER / CASHIER PANEL
+    // ════════════════════════════════════════════════════════════
+
+    // Track expanded tables in manager
+    const mgrExpanded = {};
+    function mgrToggle(tbl) { mgrExpanded[tbl] = !mgrExpanded[tbl]; renderManager(); }
+
+    function markPaid(tbl) {
+      const acct = STATE.tableAccounts[tbl];
+      if (acct) { acct.paid = true; toast(`Table ${tbl} marked PAID ✓`, 'success'); renderManager(); updateStats(); }
+    }
+
+    function closeTable(tbl) {
+      const acct = STATE.tableAccounts[tbl];
+      if (acct) {
+        acct.closed = true;
+        acct.closedAt = new Date();
+        toast(`Table ${tbl} closed`, 'info');
+        renderAll();
+      }
+    }
+
+    function renderManager() {
+      const container = document.getElementById('mgr-list');
+      const search = document.getElementById('mgr-search').value.trim().toLowerCase();
+
+      let accounts = Object.values(STATE.tableAccounts).filter(a => !a.closed);
+
+      if (search) {
+        accounts = accounts.filter(a => {
+          if (String(a.tableNumber).includes(search)) return true;
+          return a.orderIds.some(oid => oid.includes(search));
+        });
+      }
+
+      document.getElementById('mgr-cnt').textContent = accounts.length;
+
+      if (accounts.length === 0) {
+        container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-500 gap-1.5">
+      <span class="text-2xl opacity-25">💶</span>
+      <span class="text-[11px] font-medium">No open tables</span>
+    </div>`;
+        return;
+      }
+
+      // Sort by table number
+      accounts.sort((a, b) => a.tableNumber - b.tableNumber);
+
+      container.innerHTML = accounts.map(acct => {
+        const total = accountTotal(acct);
+        const expanded = !!mgrExpanded[acct.tableNumber];
+        const allOrders = acct.orderIds.map(oid => STATE.orders[oid]).filter(Boolean);
+        const allItems = allOrders.flatMap(o => o.items);
+        const allReady = allItems.length > 0 && allItems.every(i => i.status === 'Ready');
+        const pendingCount = allItems.filter(i => i.status !== 'Ready').length;
+        const bc = acct.paid ? 'border-emerald-500/30 bg-emerald-900/10' : allReady ? 'border-green-500/20' : 'border-slate-700/40';
+
+        let h = `<div class="order-card rounded-xl bg-slate-800/50 border ${bc} anim-slide overflow-hidden">`;
+
+        // ── Header ──
+        h += `<div class="p-2.5 cursor-pointer hover:bg-slate-700/20 transition-colors" onclick="mgrToggle(${acct.tableNumber})">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500/30 flex items-center justify-center text-sm font-extrabold text-white">${acct.tableNumber}</div>
+          <div>
+            <div class="text-xs font-bold">Table ${acct.tableNumber}</div>
+            <div class="flex items-center gap-1.5 text-[9px] text-slate-400 mt-0.5">
+              <span>${allOrders.length} order${allOrders.length !== 1 ? 's' : ''}</span>
+              <span>·</span>
+              <span>${allItems.length} item${allItems.length !== 1 ? 's' : ''}</span>
+              ${pendingCount > 0 ? `<span>·</span><span class="text-amber-400">${pendingCount} pending</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="text-right flex items-center gap-2">
+          <div>
+            <div class="text-base font-extrabold text-white">${total.toFixed(total % 1 ? 2 : 0)}€</div>
+            ${acct.paid ? `<span class="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/15 font-bold">PAID</span>` : ''}
+          </div>
+          <svg class="w-3.5 h-3.5 text-slate-500 transition-transform ${expanded ? 'rotate-90' : ''}" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+        </div>
+      </div>
+    </div>`;
+
+        // ── Expanded content ──
+        if (expanded) {
+          h += `<div class="border-t border-slate-700/20 anim-fade">`;
+
+          allOrders.forEach(order => {
+            const foodItems = order.items.filter(i => i.destination === 'kitchen');
+            const drinkItems = order.items.filter(i => i.destination === 'bar');
+            const orderTotal = order.items.reduce((s, i) => s + i.price, 0);
+
+            h += `<div class="p-2.5 border-b border-slate-700/15 last:border-b-0">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-1.5">
+              <span class="font-mono font-bold text-[10px] text-emerald-400">#${order.id}</span>
+              <span class="text-[9px] text-slate-500">${order.waiter}</span>
+              <span class="text-[9px] text-slate-500">${fmtShort(order.timestamp)}</span>
+            </div>
+            <span class="text-[11px] font-bold text-slate-300">${orderTotal.toFixed(orderTotal % 1 ? 2 : 0)}€</span>
+          </div>`;
+
+            // Food
+            if (foodItems.length > 0) {
+              h += `<div class="text-[8px] font-bold text-orange-400/50 uppercase tracking-widest mb-0.5">Food</div>`;
+              foodItems.forEach(item => {
+                const mc = modChips(item);
+                h += `<div class="flex items-center justify-between py-px text-[10px]">
+              <div class="flex items-center gap-1 flex-1 min-w-0">
+                <span>${item.emoji}</span>
+                <span class="font-medium truncate">${item.name}</span>
+                ${mc ? `<span class="flex-shrink-0">${mc}</span>` : ''}
+              </div>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                ${badge(item.status, true)}
+                <span class="text-slate-500 font-semibold w-6 text-right">${item.price}€</span>
+              </div>
+            </div>`;
+                if (item.note) h += `<div class="text-[8px] text-violet-400/60 ml-5 mb-0.5">🏷 ${esc(item.note)}</div>`;
+              });
+            }
+
+            // Drinks
+            if (drinkItems.length > 0) {
+              h += `<div class="text-[8px] font-bold text-cyan-400/50 uppercase tracking-widest mb-0.5 mt-1">Drinks</div>`;
+              drinkItems.forEach(item => {
+                const mc = modChips(item);
+                h += `<div class="flex items-center justify-between py-px text-[10px]">
+              <div class="flex items-center gap-1 flex-1 min-w-0">
+                <span>${item.emoji}</span>
+                <span class="font-medium truncate">${item.name}</span>
+                ${mc ? `<span class="flex-shrink-0">${mc}</span>` : ''}
+              </div>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                ${badge(item.status, true)}
+                <span class="text-slate-500 font-semibold w-6 text-right">${item.price}€</span>
+              </div>
+            </div>`;
+                if (item.note) h += `<div class="text-[8px] text-violet-400/60 ml-5 mb-0.5">🏷 ${esc(item.note)}</div>`;
+              });
+            }
+
+            if (order.note) {
+              h += `<div class="text-[9px] text-amber-400/60 bg-amber-500/5 rounded-md px-1.5 py-0.5 mt-1 border border-amber-500/10">📝 ${esc(order.note)}</div>`;
+            }
+
+            h += `</div>`;
+          });
+
+          // Actions
+          h += `<div class="p-2.5 flex gap-1.5 border-t border-slate-700/20 bg-slate-900/30">`;
+          if (!acct.paid) {
+            h += `<button onclick="markPaid(${acct.tableNumber})" class="btn-pos flex-1 py-1.5 rounded-lg text-[10px] font-bold ${allReady ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow shadow-emerald-500/15 hover:from-emerald-500 hover:to-green-500' : 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/15'}">💳 Mark Paid — ${total.toFixed(total % 1 ? 2 : 0)}€</button>`;
+          }
+          h += `<button onclick="closeTable(${acct.tableNumber})" class="btn-pos ${acct.paid ? 'flex-1' : ''} px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold hover:bg-red-500/15">${acct.paid ? '✓ Close Table' : '✕ Close'}</button>`;
+          h += `</div>`;
+
+          h += `</div>`; // end expanded
+        }
+
+        h += `</div>`;
+        return h;
+      }).join('');
+    }
+
+    // ════════════════════════════════════════════════════════════
+    //  7. STATS & CLOCK
+    // ════════════════════════════════════════════════════════════
+    function updateStats() {
+      const openAccounts = Object.values(STATE.tableAccounts).filter(a => !a.closed);
+      const activeOrders = Object.values(STATE.orders).filter(o => {
+        const acct = STATE.tableAccounts[o.tableNumber];
+        return acct && !acct.closed;
+      });
+      const allItems = activeOrders.flatMap(o => o.items);
+
+      document.getElementById('st-tables').textContent = openAccounts.length;
+      document.getElementById('st-orders').textContent = activeOrders.length;
+      document.getElementById('st-prep').textContent = allItems.filter(i => i.status === 'Preparing').length;
+      document.getElementById('st-ready').textContent = allItems.filter(i => i.status === 'Ready').length;
+    }
+
+    function tickClock() { document.getElementById('clock').textContent = fmtTime(new Date()); }
+
+    // ════════════════════════════════════════════════════════════
+    //  8. CLEAR ALL
+    // ════════════════════════════════════════════════════════════
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      if (Object.keys(STATE.orders).length === 0) { toast('Nothing to clear', 'info'); return; }
+      Object.keys(STATE.orders).forEach(k => delete STATE.orders[k]);
+      Object.keys(STATE.tableAccounts).forEach(k => delete STATE.tableAccounts[k]);
+      Object.keys(mgrExpanded).forEach(k => delete mgrExpanded[k]);
+      _orderSeq = 0; _instSeq = 0;
+      toast('All data cleared', 'warning');
+      renderAll();
+    });
+
+    // ════════════════════════════════════════════════════════════
+    //  9. SEARCH LISTENERS
+    // ════════════════════════════════════════════════════════════
+    document.getElementById('kit-search').addEventListener('input', renderKitchen);
+    document.getElementById('bar-search').addEventListener('input', renderBar);
+    document.getElementById('mgr-search').addEventListener('input', renderManager);
+
+    // ════════════════════════════════════════════════════════════
+    //  10. RENDER ALL & INIT
+    // ════════════════════════════════════════════════════════════
+    function renderAll() { renderWaiter('w1'); renderWaiter('w2'); renderKitchen(); renderBar(); renderManager(); updateStats(); }
+
+    initDraft('w1'); initDraft('w2');
+    renderAll();
+    tickClock();
+    setInterval(tickClock, 1000);
+  </script>
+</body>
+
+</html>
