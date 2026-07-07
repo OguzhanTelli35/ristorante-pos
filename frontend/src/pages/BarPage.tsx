@@ -7,7 +7,7 @@ export default function BarPage() {
     <AppLayout>
       <StationPanel
         destination="bar"
-        title="Bar"
+        title="Bar Display"
         icon="🍹"
         accentColor="cyan"
         gradientFrom="from-cyan-500"

@@ -8,6 +8,15 @@ export function runMigrations(): void {
   const db = getDatabase();
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      full_name TEXT NOT NULL,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('admin', 'kitchen', 'bar', 'waiter')),
+      active INTEGER NOT NULL DEFAULT 1
+    );
+
     CREATE TABLE IF NOT EXISTS menu_categories (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,

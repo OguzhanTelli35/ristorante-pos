@@ -7,7 +7,7 @@ export default function KitchenPage() {
     <AppLayout>
       <StationPanel
         destination="kitchen"
-        title="Kitchen"
+        title="Kitchen Display"
         icon="🔥"
         accentColor="orange"
         gradientFrom="from-orange-500"

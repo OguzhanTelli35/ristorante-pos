@@ -10,6 +10,7 @@ import { requestLogger } from './middleware/requestLogger.js';
 import menuRoutes from './routes/menu.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import tablesRoutes from './routes/tables.routes.js';
+import authRoutes from './routes/auth.routes.js';
 
 async function main() {
   // ── Initialize Database ──
@@ -18,10 +19,10 @@ async function main() {
 
   // Check if menu needs seeding
   const db = getDatabase();
-  const row = db.prepare('SELECT COUNT(*) as count FROM menu_categories').get() as
-    | { count: number }
-    | undefined;
-  if (!row || row.count === 0) {
+  const menuRow = db.prepare('SELECT COUNT(*) as count FROM menu_categories').get() as { count: number } | undefined;
+  const userRow = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number } | undefined;
+  
+  if (!menuRow || menuRow.count === 0 || !userRow || userRow.count === 0) {
     seedDatabase();
   }
 
@@ -43,6 +44,7 @@ async function main() {
   app.use('/api/menu', menuRoutes);
   app.use('/api/orders', ordersRoutes);
   app.use('/api/tables', tablesRoutes);
+  app.use('/api/auth', authRoutes);
 
   // ── Error Handler ──
   app.use(errorHandler);

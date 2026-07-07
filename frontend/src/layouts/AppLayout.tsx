@@ -5,21 +5,17 @@ import { useTables } from '@/hooks/useTables';
 import { useOrders, useClearAllOrders } from '@/hooks/useOrders';
 import { useResponsive } from '@/hooks/useResponsive';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 interface AppLayoutProps {
   children: React.ReactNode;
 }
-
-const mobileNavItems = [
-  { path: '/waiter', label: 'Orders', icon: '📝' },
-  { path: '/kitchen', label: 'Kitchen', icon: '🔥' },
-  { path: '/bar', label: 'Bar', icon: '🍹' },
-  { path: '/manager', label: 'Manager', icon: '💶' },
-];
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const clock = useClock();
+  const { user, logout } = useAuth();
   const { isPhone } = useResponsive();
   const { data: tables = [] } = useTables();
   const { data: orders = [] } = useOrders();
@@ -73,10 +69,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </>
           )}
           <span className="font-mono tabular-nums text-slate-300 w-16 text-right">{clock}</span>
+          
+          <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-700">
+            <span className="text-amber-400 capitalize">{user?.fullName || user?.role}</span>
+            <button
+              onClick={() => logout()}
+              className="btn-pos px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold hover:bg-slate-700"
+            >
+              Logout
+            </button>
+          </div>
+          
           <button
             onClick={() => clearAll.mutate()}
             disabled={clearAll.isPending}
-            className="btn-pos px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 text-[10px] font-bold hover:bg-red-500/20"
+            className="btn-pos ml-2 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 text-[10px] font-bold hover:bg-red-500/20"
           >
             Clear All
           </button>
@@ -85,29 +92,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* ── Main Content ── */}
       <main className="flex-1 overflow-hidden">{children}</main>
-
-      {/* ── Mobile Bottom Navigation ── */}
-      {isPhone && (
-        <nav className="h-14 bg-slate-900/90 border-t border-slate-700/40 flex items-center justify-around px-2 backdrop-blur-md flex-shrink-0">
-          {mobileNavItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg transition-colors ${
-                  isActive
-                    ? 'text-blue-400 bg-blue-500/10'
-                    : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span className="text-[9px] font-semibold">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      )}
     </div>
   );
 }

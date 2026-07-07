@@ -14,6 +14,7 @@ import Badge from '@/components/common/Badge';
 import ModificationChips from '@/components/common/ModificationChips';
 import SearchInput from '@/components/common/SearchInput';
 import EmptyState from '@/components/common/EmptyState';
+import WaiterManagement from './WaiterManagement';
 
 export default function ManagerPanel() {
   const [search, setSearch] = useState('');
@@ -35,25 +36,49 @@ export default function ManagerPanel() {
     );
   }, [accounts, search]);
 
+  const [activeTab, setActiveTab] = useState<'cashier' | 'staff'>('cashier');
+
   return (
     <section className="flex flex-col overflow-hidden h-full">
       {/* Header */}
       <div className="px-3 py-2 border-b border-slate-700/30 bg-slate-900/50 flex-shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-green-700 flex items-center justify-center text-white text-xs">
             💶
           </div>
-          <span className="font-bold text-xs">Manager / Cashier</span>
-          <span className="ml-auto text-[10px] bg-emerald-500/15 text-emerald-300 px-1.5 py-0.5 rounded-full font-bold">
-            {filteredAccounts.length}
-          </span>
+          <span className="font-bold text-xs">Manager</span>
         </div>
-        <div className="mt-1.5">
-          <SearchInput value={search} onChange={setSearch} accentColor="emerald" />
+        
+        {/* Tabs */}
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={() => setActiveTab('cashier')}
+            className={`flex-1 py-1 rounded-md text-[10px] font-bold transition-colors ${activeTab === 'cashier' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+          >
+            Cashier
+          </button>
+          <button
+            onClick={() => setActiveTab('staff')}
+            className={`flex-1 py-1 rounded-md text-[10px] font-bold transition-colors ${activeTab === 'staff' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+          >
+            Staff
+          </button>
         </div>
+
+        {activeTab === 'cashier' && (
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="text-[10px] bg-emerald-500/15 text-emerald-300 px-1.5 py-0.5 rounded-full font-bold">
+              {filteredAccounts.length} Open
+            </span>
+            <div className="flex-1">
+              <SearchInput value={search} onChange={setSearch} accentColor="emerald" />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Account List */}
+      {/* Content */}
+      {activeTab === 'cashier' && (
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
         {filteredAccounts.length === 0 ? (
           <EmptyState icon="💶" message="No open tables" />
@@ -255,6 +280,9 @@ export default function ManagerPanel() {
           })
         )}
       </div>
+      )}
+      
+      {activeTab === 'staff' && <WaiterManagement />}
     </section>
   );
 }
