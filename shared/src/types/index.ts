@@ -65,6 +65,11 @@ export interface Order {
 export interface TableAccount {
   id: string;
   tableNumber: number;
+  guestCount: number;
+  waiterId?: string;
+  customerName?: string;
+  note?: string;
+  status: 'available' | 'occupied' | 'waiting_payment' | 'reserved' | 'cleaning';
   orderIds: string[];
   orders?: Order[];
   paid: boolean;
@@ -74,6 +79,14 @@ export interface TableAccount {
 }
 
 // ── API Request / Response Types ──
+
+export interface OpenTableRequest {
+  tableNumber: number;
+  guestCount: number;
+  waiterId?: string;
+  customerName?: string;
+  note?: string;
+}
 
 export interface CreateOrderRequest {
   tableNumber: number;

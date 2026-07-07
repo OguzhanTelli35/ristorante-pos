@@ -7,6 +7,11 @@ import { NotFoundError } from '../middleware/errorHandler.js';
 interface TableAccountRow {
   id: string;
   table_number: number;
+  guest_count: number;
+  waiter_id: string | null;
+  customer_name: string | null;
+  note: string | null;
+  status: string;
   paid: number;
   closed: number;
   opened_at: string;
@@ -73,6 +78,11 @@ function mapAccountRow(row: TableAccountRow, orders?: Order[]): TableAccount {
   return {
     id: row.id,
     tableNumber: row.table_number,
+    guestCount: row.guest_count,
+    waiterId: row.waiter_id || undefined,
+    customerName: row.customer_name || undefined,
+    note: row.note || undefined,
+    status: (row.status as any) || 'available',
     orderIds,
     orders,
     paid: row.paid === 1,
@@ -130,6 +140,41 @@ export function getTableAccount(tableNumber: number): TableAccount {
   });
 
   return mapAccountRow(accRow, orders);
+}
+
+import { v4 as uuidv4 } from 'uuid';
+import type { OpenTableRequest } from '@ristorante/shared';
+
+export function openTable(req: OpenTableRequest): TableAccount {
+  const db = getDatabase();
+
+  // Check if already open
+  const existing = db
+    .prepare('SELECT id FROM table_accounts WHERE table_number = ? AND closed = 0')
+    .get(req.tableNumber);
+
+  if (existing) {
+    throw new Error(`Table ${req.tableNumber} is already open.`);
+  }
+
+  const tableAccountId = uuidv4();
+  const now = new Date().toISOString();
+
+  db.prepare(
+    `INSERT INTO table_accounts 
+     (id, table_number, guest_count, waiter_id, customer_name, note, status, paid, closed, opened_at) 
+     VALUES (?, ?, ?, ?, ?, ?, 'occupied', 0, 0, ?)`
+  ).run(
+    tableAccountId,
+    req.tableNumber,
+    req.guestCount || 1,
+    req.waiterId || null,
+    req.customerName || null,
+    req.note || null,
+    now
+  );
+
+  return getTableAccount(req.tableNumber);
 }
 
 export function markTablePaid(tableNumber: number): TableAccount {

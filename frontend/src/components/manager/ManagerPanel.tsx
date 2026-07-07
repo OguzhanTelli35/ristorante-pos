@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { TableAccount, Order } from '@ristorante/shared';
+import type { TableAccount, Order, User } from '@ristorante/shared';
 import {
   formatCurrency,
   formatISOTimeShort,
@@ -15,6 +15,8 @@ import ModificationChips from '@/components/common/ModificationChips';
 import SearchInput from '@/components/common/SearchInput';
 import EmptyState from '@/components/common/EmptyState';
 import WaiterManagement from './WaiterManagement';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/services/api';
 
 export default function ManagerPanel() {
   const [search, setSearch] = useState('');
@@ -26,6 +28,14 @@ export default function ManagerPanel() {
   const toggleExpand = (tableNumber: number) => {
     setExpandedTables((prev) => ({ ...prev, [tableNumber]: !prev[tableNumber] }));
   };
+
+  const { data: waiters = [] } = useQuery({
+    queryKey: ['waiters'],
+    queryFn: async () => {
+      const res = await api.get<{ success: boolean; data: User[] }>('/auth/waiters');
+      return res.data.data;
+    },
+  });
 
   const filteredAccounts = useMemo(() => {
     if (!search.trim()) return accounts;
@@ -115,13 +125,11 @@ export default function ManagerPanel() {
                       <div>
                         <div className="text-xs font-bold">Table {account.tableNumber}</div>
                         <div className="flex items-center gap-1.5 text-[9px] text-slate-400 mt-0.5">
-                          <span>
-                            {allOrders.length} order{allOrders.length !== 1 ? 's' : ''}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            {allItems.length} item{allItems.length !== 1 ? 's' : ''}
-                          </span>
+                          {account.waiterId && (
+                            <span>{waiters.find(w => w.id === account.waiterId)?.fullName || account.waiterId}</span>
+                          )}
+                          {account.waiterId && <span>·</span>}
+                          <span>{account.guestCount || 1} Guests</span>
                           {pendingCount > 0 && (
                             <>
                               <span>·</span>

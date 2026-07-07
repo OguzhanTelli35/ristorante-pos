@@ -10,6 +10,15 @@ export function getTables(_req: Request, res: Response, next: NextFunction): voi
   }
 }
 
+export function openTable(req: Request, res: Response, next: NextFunction): void {
+  try {
+    const account = tablesService.openTable(req.body);
+    res.json({ success: true, data: account });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export function getTable(req: Request, res: Response, next: NextFunction): void {
   try {
     const tableNumber = parseInt(req.params.tableNumber, 10);

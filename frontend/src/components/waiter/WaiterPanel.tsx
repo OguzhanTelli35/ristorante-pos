@@ -12,6 +12,8 @@ interface WaiterPanelProps {
   waiterName: string;
   accentColor: string;
   accentGradient: string;
+  prefillTableNumber?: number;
+  onClose?: () => void;
 }
 
 export default function WaiterPanel({
@@ -19,6 +21,8 @@ export default function WaiterPanel({
   waiterName,
   accentColor,
   accentGradient,
+  prefillTableNumber,
+  onClose,
 }: WaiterPanelProps) {
   const { data: categories = [] } = useMenu();
   const createOrder = useCreateOrder();
@@ -45,6 +49,12 @@ export default function WaiterPanel({
   const totalItems = getTotalItemCount(waiterId);
   const draftTotal = getDraftTotal(waiterId);
   const activeCategory = categories.find((c) => c.id === draft.activeCategoryId) ?? categories[0];
+
+  React.useEffect(() => {
+    if (prefillTableNumber) {
+      setTableNumber(waiterId, String(prefillTableNumber));
+    }
+  }, [prefillTableNumber, waiterId, setTableNumber]);
 
   const [ingredientInputs, setIngredientInputs] = useState<Record<string, string>>({});
 
@@ -79,7 +89,10 @@ export default function WaiterPanel({
         items,
       },
       {
-        onSuccess: () => resetDraft(waiterId),
+        onSuccess: () => {
+          resetDraft(waiterId);
+          if (onClose) onClose();
+        },
       },
     );
   };
@@ -106,8 +119,9 @@ export default function WaiterPanel({
           max={99}
           value={draft.tableNumber}
           placeholder="e.g. 5"
+          readOnly={!!prefillTableNumber}
           onChange={(e) => setTableNumber(waiterId, e.target.value)}
-          className="w-full px-2.5 py-2 rounded-xl bg-slate-800/70 border border-slate-600/30 text-white text-sm font-bold placeholder-slate-500 focus:outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/15"
+          className={`w-full px-2.5 py-2 rounded-xl bg-slate-800/70 border border-slate-600/30 text-white text-sm font-bold placeholder-slate-500 focus:outline-none ${!!prefillTableNumber ? 'opacity-70 cursor-not-allowed' : 'focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/15'}`}
         />
       </div>
 

@@ -39,6 +39,11 @@ export function runMigrations(): void {
     CREATE TABLE IF NOT EXISTS table_accounts (
       id TEXT PRIMARY KEY,
       table_number INTEGER NOT NULL,
+      guest_count INTEGER NOT NULL DEFAULT 1,
+      waiter_id TEXT,
+      customer_name TEXT,
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'available',
       paid INTEGER NOT NULL DEFAULT 0,
       closed INTEGER NOT NULL DEFAULT 0,
       opened_at TEXT NOT NULL,
@@ -87,4 +92,22 @@ export function runMigrations(): void {
   `);
 
   console.log('✓ Database migrations complete');
+
+  // Attempt to alter table if existing db doesn't have the new columns
+  const alters = [
+    "ALTER TABLE table_accounts ADD COLUMN guest_count INTEGER NOT NULL DEFAULT 1;",
+    "ALTER TABLE table_accounts ADD COLUMN waiter_id TEXT;",
+    "ALTER TABLE table_accounts ADD COLUMN customer_name TEXT;",
+    "ALTER TABLE table_accounts ADD COLUMN note TEXT;",
+    "ALTER TABLE table_accounts ADD COLUMN status TEXT NOT NULL DEFAULT 'available';"
+  ];
+
+  for (const query of alters) {
+    try {
+      db.exec(query);
+      console.log('✓ Applied migration:', query);
+    } catch (e: any) {
+      // Ignore if column already exists
+    }
+  }
 }
