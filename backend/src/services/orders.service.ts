@@ -127,12 +127,12 @@ export function getOrders(filters?: {
 
   query += ' ORDER BY o.created_at DESC';
 
-  const orderRows = db.prepare(query).all(...params) as OrderRow[];
+  const orderRows = db.prepare(query).all(...params) as unknown as OrderRow[];
 
   return orderRows.map((orderRow) => {
     const itemRows = db
       .prepare('SELECT * FROM order_items WHERE order_id = ?')
-      .all(orderRow.id) as OrderItemRow[];
+      .all(orderRow.id) as unknown as OrderItemRow[];
 
     const items = itemRows.map(mapOrderItemRow);
 
@@ -159,7 +159,7 @@ export function getOrderById(orderId: string): Order {
 
   const itemRows = db
     .prepare('SELECT * FROM order_items WHERE order_id = ?')
-    .all(orderId) as OrderItemRow[];
+    .all(orderRow.id) as unknown as OrderItemRow[];
 
   return mapOrderRow(orderRow, itemRows.map(mapOrderItemRow));
 }

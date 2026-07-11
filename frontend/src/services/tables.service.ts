@@ -20,3 +20,8 @@ export async function closeTable(tableNumber: number): Promise<TableAccount> {
   const res = await api.post<ApiResponse<TableAccount>>(`/tables/${tableNumber}/close`);
   return res.data.data;
 }
+
+export async function updateTableStatus(tableNumber: number, status: string): Promise<TableAccount> {
+  const res = await api.patch<ApiResponse<TableAccount>>(`/tables/${tableNumber}/status`, { status });
+  return res.data.data;
+}

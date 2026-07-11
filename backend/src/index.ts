@@ -11,6 +11,8 @@ import menuRoutes from './routes/menu.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import tablesRoutes from './routes/tables.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import inventoryRoutes from './routes/inventory.routes.js';
+import reservationsRoutes from './routes/reservations.routes.js';
 
 async function main() {
   // ── Initialize Database ──
@@ -45,6 +47,8 @@ async function main() {
   app.use('/api/orders', ordersRoutes);
   app.use('/api/tables', tablesRoutes);
   app.use('/api/auth', authRoutes);
+  app.use('/api/inventory', inventoryRoutes);
+  app.use('/api/reservations', reservationsRoutes);
 
   // ── Error Handler ──
   app.use(errorHandler);

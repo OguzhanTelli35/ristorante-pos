@@ -86,6 +86,11 @@ export interface OpenTableRequest {
   waiterId?: string;
   customerName?: string;
   note?: string;
+  status?: 'available' | 'reserved' | 'occupied' | 'waiting_payment' | 'cleaning';
+}
+
+export interface UpdateTableStatusRequest {
+  status: 'available' | 'reserved' | 'occupied' | 'waiting_payment' | 'cleaning';
 }
 
 export interface CreateOrderRequest {
@@ -104,6 +109,72 @@ export interface CreateOrderItemRequest {
 
 export interface UpdateItemStatusRequest {
   status: OrderItemStatus;
+}
+
+// ── Inventory ──
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  quantity: number;
+  minStock: number;
+}
+
+export interface CreateInventoryItemRequest {
+  name: string;
+  category: string;
+  unit: string;
+  quantity: number;
+  minStock: number;
+}
+
+export interface UpdateInventoryItemRequest {
+  name?: string;
+  category?: string;
+  unit?: string;
+  quantity?: number;
+  minStock?: number;
+}
+
+// ── Reservations ──
+
+export type ReservationStatus = 'pending' | 'confirmed' | 'seated' | 'cancelled' | 'completed';
+
+export interface Reservation {
+  id: string;
+  customerName: string;
+  phoneNumber?: string;
+  tableNumber: number;
+  reservationDate: string; // YYYY-MM-DD
+  reservationTime: string; // HH:MM
+  guestCount: number;
+  status: ReservationStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateReservationRequest {
+  customerName: string;
+  phoneNumber?: string;
+  tableNumber: number;
+  reservationDate: string;
+  reservationTime: string;
+  guestCount: number;
+  notes?: string;
+}
+
+export interface UpdateReservationRequest {
+  customerName?: string;
+  phoneNumber?: string;
+  tableNumber?: number;
+  reservationDate?: string;
+  reservationTime?: string;
+  guestCount?: number;
+  status?: ReservationStatus;
+  notes?: string;
 }
 
 export interface ApiResponse<T> {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTables } from '@/hooks/useTables';
 import TableDetailsModal from './TableDetailsModal';
+import { getTableStatusColor, getTableStatusLabel, TableStatus } from '@/utils/tableStatus';
 
 interface RestaurantMapProps {
   onOrderEntry?: (tableNumber: number) => void;
@@ -40,14 +41,16 @@ export default function RestaurantMap({ onOrderEntry }: RestaurantMapProps) {
 
   const getTableColorClass = (tableNumber: number) => {
     const account = activeTables.find(t => t.tableNumber === tableNumber);
-    if (!account) return 'bg-slate-800 border-slate-600 hover:border-emerald-500 hover:bg-slate-700 shadow-emerald-500/0';
-    return 'bg-orange-900/40 border-orange-500 hover:border-orange-400 shadow-orange-500/20';
+    const status = (account?.status || 'available') as TableStatus;
+    const colors = getTableStatusColor(status);
+    return `${colors.bg} ${colors.border} hover:opacity-80 ${colors.shadow}`;
   };
 
-  const getTableStatusLabel = (tableNumber: number) => {
+  const getTableStatusText = (tableNumber: number) => {
     const account = activeTables.find(t => t.tableNumber === tableNumber);
-    if (!account) return 'Available';
-    return account.guestCount ? `${account.guestCount} Guests` : 'Occupied';
+    const status = (account?.status || 'available') as TableStatus;
+    if (status === 'available') return 'Available';
+    return account?.guestCount ? `${account.guestCount} Guests` : getTableStatusLabel(status);
   };
 
   const selectedTableData = ALL_TABLES.find(t => t.num === selectedTableNum);
@@ -57,7 +60,7 @@ export default function RestaurantMap({ onOrderEntry }: RestaurantMapProps) {
 
   const renderTable = (table: { id: string; num: number; cap: number }) => {
     const colors = getTableColorClass(table.num);
-    const status = getTableStatusLabel(table.num);
+    const status = getTableStatusText(table.num);
     
     if (table.cap === 2) {
       return (
@@ -98,9 +101,11 @@ export default function RestaurantMap({ onOrderEntry }: RestaurantMapProps) {
           <p className="text-xs text-slate-400 mt-1">Select a table to manage orders</p>
         </div>
         <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div> Available</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Available</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div> Reserved</div>
           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div> Occupied</div>
           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Waiting Payment</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div> Cleaning</div>
         </div>
       </div>
 

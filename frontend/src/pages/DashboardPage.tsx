@@ -3,10 +3,12 @@ import WaiterPanel from '@/components/waiter/WaiterPanel';
 import StationPanel from '@/components/station/StationPanel';
 import ManagerPanel from '@/components/manager/ManagerPanel';
 import RestaurantMap from '@/components/dashboard/RestaurantMap';
+import InventoryPanel from '@/components/inventory/InventoryPanel';
+import ReservationPanel from '@/components/reservations/ReservationPanel';
 import AppLayout from '@/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 
-type Tab = 'dashboard' | 'order_entry' | 'kitchen' | 'bar' | 'inventory' | 'reservations' | 'reports' | 'settings';
+type Tab = 'dashboard' | 'kitchen' | 'bar' | 'inventory' | 'reservations' | 'manager';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -19,10 +21,9 @@ export default function DashboardPage() {
     { id: 'dashboard', label: 'Dashboard', icon: '📊', disabled: false },
     { id: 'kitchen', label: 'Kitchen Display', icon: '🔥', disabled: false },
     { id: 'bar', label: 'Bar Display', icon: '🍹', disabled: false },
-    { id: 'inventory', label: 'Inventory', icon: '📦', disabled: true },
-    { id: 'reservations', label: 'Reservations', icon: '📅', disabled: true },
-    { id: 'reports', label: 'Reports', icon: '📈', disabled: true },
-    { id: 'settings', label: 'Settings', icon: '⚙️', disabled: true },
+    { id: 'reservations', label: 'Reservations', icon: '📅', disabled: false },
+    { id: 'manager', label: 'Manager / Cashier', icon: '💶', disabled: false },
+    { id: 'inventory', label: 'Inventory', icon: '📦', disabled: user?.role !== 'admin' },
   ];
 
   return (
@@ -102,9 +103,6 @@ export default function DashboardPage() {
                   </>
                 )}
               </div>
-              <div className="w-96 flex-shrink-0 bg-slate-900/30">
-                <ManagerPanel />
-              </div>
             </div>
           )}
 
@@ -131,6 +129,27 @@ export default function DashboardPage() {
                 gradientFrom="from-cyan-500"
                 gradientTo="to-teal-600"
               />
+            </div>
+          )}
+
+          {activeTab === 'manager' && (
+            <div className="flex-1 bg-slate-900 border-l border-slate-700/50">
+              <ManagerPanel />
+            </div>
+          )}
+
+          {activeTab === 'reservations' && (
+            <div className="flex-1 bg-slate-900 border-l border-slate-700/50 h-full overflow-hidden">
+              <ReservationPanel onHighlightTable={(num) => {
+                setActiveTab('dashboard');
+                setSelectedTable(num);
+              }} />
+            </div>
+          )}
+
+          {activeTab === 'inventory' && (
+            <div className="h-full flex flex-col">
+              <InventoryPanel />
             </div>
           )}
 

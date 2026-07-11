@@ -6,6 +6,8 @@ import api from '@/services/api';
 import type { User } from '@ristorante/shared';
 import { useToastStore } from '@/store/toastStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTransitionTableStatus, useMarkTablePaid } from '@/hooks/useTables';
+import { getTableStatusColor, getTableStatusLabel, TableStatus } from '@/utils/tableStatus';
 
 interface TableDetailsModalProps {
   tableNumber: number;
@@ -39,31 +41,36 @@ export default function TableDetailsModal({
     },
   });
 
+  const transitionStatus = useTransitionTableStatus();
+  const markPaid = useMarkTablePaid();
+
   const openTableMutation = useMutation({
     mutationFn: async (req: OpenTableRequest) => {
       const res = await api.post<{ success: boolean; data: TableAccount }>('/tables/open', req);
       return res.data.data;
     },
-    onSuccess: () => {
-      addToast(`Table ${tableNumber} opened`, 'success');
+    onSuccess: (data) => {
+      addToast(`Table ${tableNumber} opened as ${data.status}`, 'success');
       queryClient.invalidateQueries({ queryKey: ['tables'] });
     },
     onError: (err: any) => {
-      addToast(err.message, 'error');
+      addToast(err.message || err.response?.data?.error || 'Failed to open table', 'error');
     },
   });
 
-  const handleOpenTable = () => {
+  const handleOpenTable = (initialStatus: TableStatus) => {
     openTableMutation.mutate({
       tableNumber,
       guestCount,
       waiterId,
       customerName,
       note,
+      status: initialStatus
     });
   };
 
-  const isAvailable = !account;
+  const status = (account?.status || 'available') as TableStatus;
+  const isAvailable = status === 'available';
   
   // Compute totals if occupied
   let totalItems = 0;
@@ -78,7 +85,10 @@ export default function TableDetailsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
+      onKeyDown={(e) => e.stopPropagation()}
+    >
       <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/50 flex-shrink-0">
@@ -86,11 +96,26 @@ export default function TableDetailsModal({
             <h2 className="text-lg font-bold text-white">Table {tableNumber}</h2>
             <p className="text-xs text-slate-400">Capacity: {capacity} Seats</p>
           </div>
-          <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-            isAvailable ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'
-          }`}>
-            {isAvailable ? 'Available' : 'Occupied'}
-          </div>
+          <select
+            value={status}
+            onChange={(e) => {
+              const newStatus = e.target.value as TableStatus;
+              if (newStatus !== status && window.confirm(`Are you sure you want to force the table status to ${getTableStatusLabel(newStatus)}?`)) {
+                if (isAvailable) {
+                  handleOpenTable(newStatus);
+                } else {
+                  transitionStatus.mutate({ tableNumber, status: newStatus });
+                }
+              }
+            }}
+            className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border appearance-none outline-none cursor-pointer text-center ${getTableStatusColor(status).bg} ${getTableStatusColor(status).text} ${getTableStatusColor(status).border}`}
+          >
+            <option value="available">Available</option>
+            <option value="reserved">Reserved</option>
+            <option value="occupied">Occupied</option>
+            <option value="waiting_payment">Waiting Payment</option>
+            <option value="cleaning">Cleaning</option>
+          </select>
         </div>
 
         {/* Content */}
@@ -152,7 +177,7 @@ export default function TableDetailsModal({
             </>
           ) : (
             <>
-              {/* Occupied Stats */}
+              {/* Occupied / Reserved Stats */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
                   <div className="text-[10px] text-slate-500 font-bold uppercase mb-1">Guests</div>
@@ -228,21 +253,43 @@ export default function TableDetailsModal({
             Close
           </button>
           
-          {isAvailable ? (
-            <button
-              onClick={handleOpenTable}
-              disabled={openTableMutation.isPending}
-              className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-500/20"
-            >
-              {openTableMutation.isPending ? 'Opening...' : 'Open Table'}
-            </button>
-          ) : (
+          {status === 'available' && (
             <>
               <button
-                disabled
-                className="flex-1 py-2.5 rounded-xl border border-slate-700 bg-slate-800/50 text-slate-500 text-xs font-bold cursor-not-allowed"
+                onClick={() => handleOpenTable('reserved')}
+                disabled={openTableMutation.isPending}
+                className="flex-[1.5] py-2.5 rounded-xl border border-blue-500/50 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-sm font-bold"
               >
-                Edit Table
+                Reserve Table
+              </button>
+              <button
+                onClick={() => handleOpenTable('occupied')}
+                disabled={openTableMutation.isPending}
+                className="flex-[2] py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20"
+              >
+                Seat Guests
+              </button>
+            </>
+          )}
+
+          {status === 'reserved' && (
+            <button
+              onClick={() => transitionStatus.mutate({ tableNumber, status: 'occupied' })}
+              disabled={transitionStatus.isPending}
+              className="flex-[2] py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/20"
+            >
+              Seat Guests
+            </button>
+          )}
+
+          {status === 'occupied' && (
+            <>
+              <button
+                onClick={() => transitionStatus.mutate({ tableNumber, status: 'waiting_payment' })}
+                disabled={transitionStatus.isPending}
+                className="flex-[1.5] py-2.5 rounded-xl border border-red-500/50 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-bold"
+              >
+                Request Payment
               </button>
               <button
                 onClick={() => onOrderEntry?.(tableNumber)}
@@ -251,6 +298,34 @@ export default function TableDetailsModal({
                 Add Order
               </button>
             </>
+          )}
+
+          {status === 'waiting_payment' && (
+            <button
+              onClick={() => {
+                markPaid.mutate(tableNumber, {
+                  onSuccess: () => transitionStatus.mutate({ tableNumber, status: 'cleaning' })
+                });
+              }}
+              disabled={markPaid.isPending || transitionStatus.isPending}
+              className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-500/20"
+            >
+              Mark as Paid
+            </button>
+          )}
+
+          {status === 'cleaning' && (
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure the table is clean and ready for new guests?')) {
+                  transitionStatus.mutate({ tableNumber, status: 'available' });
+                }
+              }}
+              disabled={transitionStatus.isPending}
+              className="flex-[2] py-2.5 rounded-xl border border-slate-500/50 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 text-sm font-bold"
+            >
+              Finish Cleaning
+            </button>
           )}
         </div>
       </div>

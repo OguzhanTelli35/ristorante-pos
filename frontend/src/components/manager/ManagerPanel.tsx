@@ -17,6 +17,7 @@ import EmptyState from '@/components/common/EmptyState';
 import WaiterManagement from './WaiterManagement';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/services/api';
+import { getTableStatusColor, getTableStatusLabel, TableStatus } from '@/utils/tableStatus';
 
 export default function ManagerPanel() {
   const [search, setSearch] = useState('');
@@ -125,6 +126,10 @@ export default function ManagerPanel() {
                       <div>
                         <div className="text-xs font-bold">Table {account.tableNumber}</div>
                         <div className="flex items-center gap-1.5 text-[9px] text-slate-400 mt-0.5">
+                          <span className={`px-1.5 py-[1px] rounded uppercase font-bold tracking-wider ${getTableStatusColor(account.status as TableStatus).bg} ${getTableStatusColor(account.status as TableStatus).text}`}>
+                            {getTableStatusLabel(account.status as TableStatus)}
+                          </span>
+                          <span>·</span>
                           {account.waiterId && (
                             <span>{waiters.find(w => w.id === account.waiterId)?.fullName || account.waiterId}</span>
                           )}

@@ -21,7 +21,7 @@ export function getOrders(req: Request, res: Response, next: NextFunction): void
 
 export function getOrder(req: Request, res: Response, next: NextFunction): void {
   try {
-    const order = ordersService.getOrderById(req.params.id);
+    const order = ordersService.getOrderById(req.params.id as string);
     res.json({ success: true, data: order });
   } catch (err) {
     next(err);
@@ -51,7 +51,7 @@ export function updateItemStatus(req: Request, res: Response, next: NextFunction
       throw new ValidationError(`Invalid status: ${status}. Must be one of: pending, preparing, ready`);
     }
 
-    const item = ordersService.updateItemStatus(orderId, itemId, status);
+    const item = ordersService.updateItemStatus(orderId as string, itemId as string, status);
     res.json({ success: true, data: item });
   } catch (err) {
     next(err);

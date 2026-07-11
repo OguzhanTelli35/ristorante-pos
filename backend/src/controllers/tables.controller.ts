@@ -21,7 +21,7 @@ export function openTable(req: Request, res: Response, next: NextFunction): void
 
 export function getTable(req: Request, res: Response, next: NextFunction): void {
   try {
-    const tableNumber = parseInt(req.params.tableNumber, 10);
+    const tableNumber = parseInt(req.params.tableNumber as string, 10);
     const account = tablesService.getTableAccount(tableNumber);
     res.json({ success: true, data: account });
   } catch (err) {
@@ -31,7 +31,7 @@ export function getTable(req: Request, res: Response, next: NextFunction): void 
 
 export function markPaid(req: Request, res: Response, next: NextFunction): void {
   try {
-    const tableNumber = parseInt(req.params.tableNumber, 10);
+    const tableNumber = parseInt(req.params.tableNumber as string, 10);
     const account = tablesService.markTablePaid(tableNumber);
     res.json({ success: true, data: account });
   } catch (err) {
@@ -41,8 +41,23 @@ export function markPaid(req: Request, res: Response, next: NextFunction): void 
 
 export function closeTable(req: Request, res: Response, next: NextFunction): void {
   try {
-    const tableNumber = parseInt(req.params.tableNumber, 10);
+    const tableNumber = parseInt(req.params.tableNumber as string, 10);
     const account = tablesService.closeTable(tableNumber);
+    res.json({ success: true, data: account });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export function updateStatus(req: Request, res: Response, next: NextFunction): void {
+  try {
+    const tableNumber = parseInt(req.params.tableNumber as string, 10);
+    const { status } = req.body;
+    if (!status) {
+      res.status(400).json({ success: false, error: 'Status is required' });
+      return;
+    }
+    const account = tablesService.transitionTableState(tableNumber, status);
     res.json({ success: true, data: account });
   } catch (err) {
     next(err);

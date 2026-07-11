@@ -42,3 +42,20 @@ export function useCloseTable() {
     },
   });
 }
+
+export function useTransitionTableStatus() {
+  const queryClient = useQueryClient();
+  const addToast = useToastStore((s) => s.addToast);
+
+  return useMutation({
+    mutationFn: ({ tableNumber, status }: { tableNumber: number; status: string }) => 
+      tablesApi.updateTableStatus(tableNumber, status),
+    onSuccess: (account) => {
+      queryClient.invalidateQueries({ queryKey: ['tables'] });
+      addToast(`Table ${account.tableNumber} status updated to ${account.status}`, 'success');
+    },
+    onError: (err: Error) => {
+      addToast(err.message || 'Failed to update table status', 'error');
+    },
+  });
+}

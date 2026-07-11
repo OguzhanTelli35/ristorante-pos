@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import type { Order, OrderItem, OrderItemStatus, StationDestination } from '@ristorante/shared';
 import { formatISOTimeShort } from '@ristorante/shared';
 import { useOrders, useUpdateItemStatus } from '@/hooks/useOrders';
+import { useTables } from '@/hooks/useTables';
+import { getTableStatusColor, getTableStatusLabel, TableStatus } from '@/utils/tableStatus';
 import Badge from '@/components/common/Badge';
 import ModificationChips from '@/components/common/ModificationChips';
 import SearchInput from '@/components/common/SearchInput';
@@ -50,6 +52,7 @@ export default function StationPanel({
 }: StationPanelProps) {
   const [search, setSearch] = useState('');
   const { data: orders = [] } = useOrders({ destination });
+  const { data: tables = [] } = useTables();
   const updateStatus = useUpdateItemStatus();
 
   // Build tickets: each item is a separate ticket
@@ -136,6 +139,16 @@ export default function StationPanel({
                         <span>
                           T<strong className="text-slate-200">{order.tableNumber}</strong>
                         </span>
+                        {(() => {
+                          const table = tables.find(t => t.tableNumber === order.tableNumber);
+                          const status = (table?.status || 'available') as TableStatus;
+                          const colors = getTableStatusColor(status);
+                          return (
+                            <span className={`px-1 rounded font-bold uppercase tracking-wider ${colors.bg} ${colors.text} ${colors.border}`}>
+                              {getTableStatusLabel(status)}
+                            </span>
+                          );
+                        })()}
                         <span>·</span>
                         <span>{formatISOTimeShort(order.createdAt)}</span>
                       </div>

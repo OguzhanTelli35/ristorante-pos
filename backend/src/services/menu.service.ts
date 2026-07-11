@@ -23,21 +23,21 @@ interface MenuItemRow {
 export function getAllMenuCategories(): MenuCategory[] {
   const db = getDatabase();
 
-  const categories = db
-    .prepare('SELECT * FROM menu_categories ORDER BY sort_order')
-    .all() as MenuCategoryRow[];
+  const catRows = db
+    .prepare('SELECT * FROM menu_categories ORDER BY sort_order ASC')
+    .all() as unknown as MenuCategoryRow[];
 
-  const items = db
-    .prepare('SELECT * FROM menu_items ORDER BY sort_order')
-    .all() as MenuItemRow[];
+  const itemRows = db
+    .prepare('SELECT * FROM menu_items ORDER BY sort_order ASC')
+    .all() as unknown as MenuItemRow[];
 
-  return categories.map((cat) => ({
+  return catRows.map((cat) => ({
     id: cat.id,
     name: cat.name,
     emoji: cat.emoji,
     destination: cat.destination,
     sortOrder: cat.sort_order,
-    items: items
+    items: itemRows
       .filter((item) => item.category_id === cat.id)
       .map(
         (item): MenuItem => ({

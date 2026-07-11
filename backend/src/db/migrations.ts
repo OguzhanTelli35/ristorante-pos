@@ -89,6 +89,29 @@ export function runMigrations(): void {
       ON order_items(status);
     CREATE INDEX IF NOT EXISTS idx_order_items_destination
       ON order_items(destination);
+
+    CREATE TABLE IF NOT EXISTS inventory_items (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      unit TEXT NOT NULL,
+      quantity REAL NOT NULL DEFAULT 0,
+      min_stock REAL NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS reservations (
+      id TEXT PRIMARY KEY,
+      customer_name TEXT NOT NULL,
+      phone_number TEXT,
+      table_number INTEGER NOT NULL,
+      reservation_date TEXT NOT NULL,
+      reservation_time TEXT NOT NULL,
+      guest_count INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   console.log('✓ Database migrations complete');
